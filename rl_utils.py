@@ -68,7 +68,7 @@ def train_off_policy_agent(env, agent, num_episodes, replay_buffer, minimal_size
                 state = env.reset()
                 done = False
                 while not done:
-                    env.render()
+                    # env.render()
                     action = agent.take_action(state)
                     next_state, reward, done, _ = env.step(action)
                     replay_buffer.add(state, action, reward, next_state, done)

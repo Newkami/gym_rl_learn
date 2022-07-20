@@ -5,7 +5,7 @@ import pickle
 import random
 from rl_utils import ReplayBuffer
 
-with open('data/buffer.bin', 'rb') as f:
+with open('../idea/data/buffer.bin', 'rb') as f:
     buffer = pickle.load(f)
 
 '''

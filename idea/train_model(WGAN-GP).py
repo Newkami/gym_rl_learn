@@ -97,6 +97,12 @@ def train(batch_size, epoch):
         one = one.to(device)
         mone = mone.to(device)
     for g_iter in range(epoch):
+        # if g_iter == 750:
+        #     torch.save(gen.state_dict(), "model/model_750.pth")
+        # elif g_iter == 800:
+        #     torch.save(gen.state_dict(), "model/model_800.pth")
+        # elif g_iter == 850:
+        #     torch.save(gen.state_dict(), "model/model_850.pth")
         d_iter_loss = 0
         g_iter_loss = 0
         WD_iter_loss = 0
