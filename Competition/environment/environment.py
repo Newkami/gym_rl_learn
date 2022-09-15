@@ -107,11 +107,12 @@ class Env():
         # 返回o_n',r_n,d_n
         # 每个军队智能体的动作应该为[[0,2],..[1,4]...,[2,2]] 外层为弩车的数量, []中第一维是弩的类型，第二维是打击目标类型0~4
         # action_list 应该为10个军队智能体的动作
+        reward_list = []  # 奖励值列表
         for army_index in range(len(action_list)):
             # 1.判断动作是否有效（目标是否在攻击范围内 以及目标是否还存活）
             action_avalible_list = []  # 可用动作列表
             target_list = []  # 可打击目标列表
-            reward_list = []  # 奖励值列表
+            reward = 0
             for action_index in range(len(action_list[army_index])):
                 target_type = action_list[army_index][action_index][1]  # 目标建筑类型
                 target = self.targetChoice(target_type)
@@ -123,9 +124,12 @@ class Env():
                     target_list.append(target)
                 # 该根据不同的有效目标设计不同的惩罚项
                 # (1) 若弓箭类型足够，距离也够，但打击目标已经被摧毁了 此时是否要给予惩罚，弩箭的数量是否需要减少？
+                elif x and y and not z:
+                    reward -= 10
                 # (2) 若弓箭类型不足够，距离够
                 # (3) 若弓箭类型足够，距离不够
                 else:
+                    reward -= 15
                     print("该次动作选择不可用")
             # 2.实际打击阶段
             if self.army_list[army_index].num_ballista == 0:
@@ -143,7 +147,19 @@ class Env():
                         self.army_list[army_index].num_med_bolt -= 1
                     # 目标被实际打击
                     damage = target_list[i].BeAttacked(action_avalible_list[i][0], self.shieldarray_list)
+
                     print("打击后的目标" + target_list[i].name + "血量为：", target_list[i].HP, "造成伤害", damage)
+                    if target_list[i].target_type == 0:
+                        reward += (damage + target_list[i].strike_ability) * 1.5
+                    elif target_list[i].target_type == 1:
+                        reward += (damage + target_list[i].GetCurrentAbility(target_list[i].HP)) * 1.5
+                    else:
+                        reward += damage * 1.5
+                    # print(target.target_type, reward, damage)
+                    if target_list[i].HP == 0:
+                        reward += 10
+                reward_list.append(reward)
+
             else:  # 弩车剩余数量不足，则随机执行等于弩车数量的动作
                 temp_index = secrets.SystemRandom().sample(list(range(len(action_avalible_list))),
                                                            self.army_list[army_index].num_ballista)  # 随机动作值索引列表
@@ -158,8 +174,19 @@ class Env():
                         self.army_list[army_index].num_med_bolt -= 1
 
                     # 目标被实际打击
-                    target_list[i].BeAttacked(action_avalible_list[i][0], self.shieldarray_list)
-                    print("打击后的目标" + target_list[i].name + "血量为：", target_list[i].HP)
+                    damage = target_list[i].BeAttacked(action_avalible_list[i][0], self.shieldarray_list)
+                    print("打击后的目标" + target_list[i].name + "血量为：", target_list[i].HP, "造成伤害", damage)
+                    if target_list[i].target_type == 0:
+                        reward += (damage + target_list[i].strike_ability) * 1.5
+                    elif target_list[i].target_type == 1:
+                        reward += (damage + target_list[i].GetCurrentAbility(target_list[i].HP)) * 1.5
+                    else:
+                        reward += damage * 1.5
+                    if target_list[i].HP == 0:
+                        reward += 10
+                    # print(target.target_type, reward, damage)
+
+                reward_list.append(reward)
         # 3.反制阶段
         # 3.1 兵马类目标反制
         for infantry in self.infantry_list:
@@ -174,16 +201,38 @@ class Env():
                 i = ord(catapult.strike_army) - 65
                 self.army_list[i].BeAttacked(catapult.GetCurrentAbility(catapult.HP))
 
+        print(reward_list)
         # 反制阶段结束
 
         # 判断当前回合是否结束
         # 1. 军队全部阵亡
         # 2. 目标全部被击毁
+        done = self.isDone()
+
+        o_n = self.getCurrentState()
+        return o_n, reward_list, done
 
     def isDone(self):
         for army in self.army_list:
             if army.num_ballista != 0:
-                return True
+                return False
+
+        for infantry in self.infantry_list:
+            if infantry.HP != 0:
+                return False
+        for catapult in self.catapult_list:
+            if catapult.HP != 0:
+                return False
+        for outpost in self.outpost_list:
+            if outpost.HP != 0:
+                return False
+        for shieldarray in self.shieldarray_list:
+            if shieldarray.HP != 0:
+                return False
+        for building in self.buildingobjective_list:
+            if building.HP != 0:
+                return False
+        return True
 
     def targetChoice(self, target_type):
         target = None
@@ -266,3 +315,4 @@ print("----------------------------------------")
 env.step(action_list)
 print(env.getCurrentState())
 print("----------------------------------------")
+print(env.step(action_list))
