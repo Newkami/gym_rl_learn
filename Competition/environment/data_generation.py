@@ -9,11 +9,11 @@ class Task_Generator:
         self.num_outpost = num_outpost
         self.num_shield_array = num_shield_array
         self.num_buildings = num_buildings
-        self.infantry_df = pd.read_excel('../data/Infantry.xlsx')
-        self.catapult_df = pd.read_excel('../data/Catapult.xlsx')
-        self.outpost_df = pd.read_excel('../data/Outpost.xlsx')
-        self.shield_df = pd.read_excel('../data/ShieldArray.xlsx')
-        self.buildings_df = pd.read_excel('../data/Buildings.xlsx')
+        self.infantry_df = pd.read_excel("data/Infantry.xlsx")
+        self.catapult_df = pd.read_excel('data/Catapult.xlsx')
+        self.outpost_df = pd.read_excel('data/Outpost.xlsx')
+        self.shield_df = pd.read_excel('data/ShieldArray.xlsx')
+        self.buildings_df = pd.read_excel('data/Buildings.xlsx')
 
     def target_generation(self):
         infantry_list = []

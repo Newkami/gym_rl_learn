@@ -1,5 +1,4 @@
 # 定义步兵类
-import numpy as np
 from data_generation import Task_Generator
 from gym import spaces
 from target import Army
@@ -71,11 +70,7 @@ class Env():
                                         self.num_buildings)
         self.infantry_list, self.catapult_list, self.outpost_list, self.shieldarray_list, self.buildingobjective_list = task_generator.target_generation()
 
-    def getCurrentState(self):
-        o_n = []
-        for i in range(len(self.army_list)):
-            o_n.append(self.army_list[i].num_ballista)
-        return o_n
+
 
     def reset(self):
         self.infantry_list.clear()
@@ -87,7 +82,7 @@ class Env():
         self.InitializeArmy()
         o_n = []
         for i in range(len(self.army_list)):
-            o_n.append(self.army_list[i].num_ballista)
+            o_n.append(self.getCurrentObs(i))
         return o_n
 
     def step(self, action_list):
@@ -105,8 +100,11 @@ class Env():
         # 判断是否结束
 
         # 返回o_n',r_n,d_n
-        # 每个军队智能体的动作应该为[[0,2],..[1,4]...,[2,2]] 外层为弩车的数量, []中第一维是弩的类型，第二维是打击目标类型0~4
-        # action_list 应该为10个军队智能体的动作
+        # 每个军队智能体的动作选择范围应该为[0-14]
+        # 0-4 代表使用弩车攻击兵马类、投石车。。。。
+        # 5-9 代表使用火弩攻击兵马类、投石车。。。
+        # 10-14 代表使用药弩攻击兵马类、投石车。。。
+        # action_list 应该为10个军队智能体的动作 [ 1,3,5...13] 共30个数字
         reward_list = []  # 奖励值列表
         for army_index in range(len(action_list)):
             # 1.判断动作是否有效（目标是否在攻击范围内 以及目标是否还存活）
@@ -114,9 +112,15 @@ class Env():
             target_list = []  # 可打击目标列表
             reward = 0
             for action_index in range(len(action_list[army_index])):
-                target_type = action_list[army_index][action_index][1]  # 目标建筑类型
+                if 0 <= action_list[army_index][action_index] <= 4:
+                    crosstype = 0
+                elif 5 <= action_list[army_index][action_index] <= 9:
+                    crosstype = 1
+                elif 10 <= action_list[army_index][action_index] <= 14:
+                    crosstype = 2
+                target_type = action_list[army_index][action_index] % 5  # 目标建筑类型
                 target = self.targetChoice(target_type)
-                x, y, z = self.isActionAvailable(self.army_list[army_index], action_list[army_index][action_index],
+                x, y, z = self.isActionAvailable(self.army_list[army_index], crosstype,
                                                  target)
                 if x and y and z:
                     print("随机挑选的目标为:" + target.name + " 目标当前HP:", target.HP)
@@ -138,7 +142,9 @@ class Env():
                     action_avalible_list):  # 若剩余弩车数量大于等于可执行动作数量, 执行可用动作列表中的全部动作
                 for i in range(len(target_list)):
                     # 消耗弩箭
-                    crosstype = action_avalible_list[i][0]
+
+                    crosstype = self.getCrossbowType(action_avalible_list[i])
+
                     if crosstype == 0:
                         self.army_list[army_index].num_bolt -= 1
                     elif crosstype == 1:
@@ -146,7 +152,7 @@ class Env():
                     elif crosstype == 2:
                         self.army_list[army_index].num_med_bolt -= 1
                     # 目标被实际打击
-                    damage = target_list[i].BeAttacked(action_avalible_list[i][0], self.shieldarray_list)
+                    damage = target_list[i].BeAttacked(crosstype, self.shieldarray_list)
 
                     print("打击后的目标" + target_list[i].name + "血量为：", target_list[i].HP, "造成伤害", damage)
                     if target_list[i].target_type == 0:
@@ -156,8 +162,8 @@ class Env():
                     else:
                         reward += damage * 1.5
                     # print(target.target_type, reward, damage)
-                    if target_list[i].HP == 0:
-                        reward += 10
+                    if target_list[i].HP == 0:  # 若目标被击毁 增加奖励值
+                        reward += 50
                 reward_list.append(reward)
 
             else:  # 弩车剩余数量不足，则随机执行等于弩车数量的动作
@@ -165,7 +171,8 @@ class Env():
                                                            self.army_list[army_index].num_ballista)  # 随机动作值索引列表
                 for i in temp_index:
                     # 消耗弩箭
-                    crosstype = action_avalible_list[i][0]
+                    crosstype = self.getCrossbowType(action_avalible_list[i])
+
                     if crosstype == 0:
                         self.army_list[army_index].num_bolt -= 1
                     elif crosstype == 1:
@@ -174,7 +181,7 @@ class Env():
                         self.army_list[army_index].num_med_bolt -= 1
 
                     # 目标被实际打击
-                    damage = target_list[i].BeAttacked(action_avalible_list[i][0], self.shieldarray_list)
+                    damage = target_list[i].BeAttacked(crosstype, self.shieldarray_list)
                     print("打击后的目标" + target_list[i].name + "血量为：", target_list[i].HP, "造成伤害", damage)
                     if target_list[i].target_type == 0:
                         reward += (damage + target_list[i].strike_ability) * 1.5
@@ -183,7 +190,7 @@ class Env():
                     else:
                         reward += damage * 1.5
                     if target_list[i].HP == 0:
-                        reward += 10
+                        reward += 50
                     # print(target.target_type, reward, damage)
 
                 reward_list.append(reward)
@@ -204,15 +211,20 @@ class Env():
         print(reward_list)
         # 反制阶段结束
 
-        # 判断当前回合是否结束
-        # 1. 军队全部阵亡
-        # 2. 目标全部被击毁
         done = self.isDone()
 
-        o_n = self.getCurrentState()
+        o_n = []
+        for i in range(len(self.army_list)):
+            o_n.append(self.getCurrentObs(i))
         return o_n, reward_list, done
 
     def isDone(self):
+        """
+                # 判断当前回合是否结束
+                # 1. 军队全部阵亡
+                # 2. 目标全部被击毁
+        :return:
+        """
         for army in self.army_list:
             if army.num_ballista != 0:
                 return False
@@ -249,16 +261,16 @@ class Env():
 
         return target
 
-    def isActionAvailable(self, army, action, target):
+    def isActionAvailable(self, army, crosstype, target):
         crossbow_b = False
         distance_b = False
         alive_b = True
         # 判断动作是否可用
         # 1.判断当前军队的弩箭数量是否足够
-        if self.isCrossbowEnough(army, action[0]):  # 若当前军队的特定弩箭类型数目足够
+        if self.isCrossbowEnough(army, crosstype):  # 若当前军队的特定弩箭类型数目足够
             crossbow_b = True
             # 2.判断当前打击目标是否足够距离
-            distance_b = self.isTargetInDistance(army, target, action[0])
+            distance_b = self.isTargetInDistance(army, target, crosstype)
             # 3.判断当前打击目标是否存活
             alive_b = target.HP > 0
         return crossbow_b, distance_b, alive_b
@@ -286,33 +298,54 @@ class Env():
         elif cross_type == 2:
             return (target.pos_x - army.pos_x) ** 2 + (target.pos_y - army.pos_y) ** 2 <= 600 ** 2
 
+    def getCrossbowType(self, index):
+        if 0 <= index <= 4:
+            crosstype = 0
+        elif 5 <= index <= 9:
+            crosstype = 1
+        elif 10 <= index <= 14:
+            crosstype = 2
+        return crosstype
 
-env = Env(10, 10, 10, 10, 20, 10, 10)
-a = env.reset()
+    def getCurrentState(self):
+        s = []
+        for i in range(len(self.army_list)):
+            s.append(self.army_list[i].num_ballista)
+        return s
 
-action_list = [
-    [
-        [0, 1], [1, 2], [2, 3], [2, 3], [1, 3], [0, 4]
-    ],
-    [
-        [0, 1], [1, 2], [2, 3], [2, 3], [1, 3], [0, 4]
-    ]
-]
-print(env.getCurrentState())
-print("----------------------------------------")
-env.step(action_list)
-print(env.getCurrentState())
-print("----------------------------------------")
-env.step(action_list)
-print(env.getCurrentState())
-print("----------------------------------------")
-env.step(action_list)
-print(env.getCurrentState())
-print("----------------------------------------")
-env.step(action_list)
-print(env.getCurrentState())
-print("----------------------------------------")
-env.step(action_list)
-print(env.getCurrentState())
-print("----------------------------------------")
-print(env.step(action_list))
+    def getCurrentObs(self, i):
+        o = []
+        o.append(self.army_list[i].num_ballista)
+        o.append(self.army_list[i].num_bolt)
+        o.append(self.army_list[i].num_firebolt)
+        o.append(self.army_list[i].num_med_bolt)
+        return o
+# env = Env(10, 10, 10, 10, 20, 10, 10)
+# a = env.reset()
+#
+# action_list = [
+#     [
+#         1, 5, 9, 10, 11, 2
+#     ],
+#     [
+#         3, 6, 1, 0, 12, 14
+#     ]
+# ]
+# print(env.getCurrentState())
+# print("----------------------------------------")
+# env.step(action_list)
+# print(env.getCurrentState())
+# print("----------------------------------------")
+# env.step(action_list)
+# print(env.getCurrentState())
+# print("----------------------------------------")
+# env.step(action_list)
+# print(env.getCurrentState())
+# print("----------------------------------------")
+# env.step(action_list)
+# print(env.getCurrentState())
+# print("----------------------------------------")
+# env.step(action_list)
+# print(env.getCurrentState())
+# print("----------------------------------------")
+# print(env.step(action_list))

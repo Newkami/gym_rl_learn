@@ -1,7 +1,6 @@
 # infantry 步兵
 # Ballista 弩车
 # Catapult 投石车
-import torch
 class Infantry():
     def __init__(self, name, HP, pos_x, pos_y, target_type, strike_ability, strike_army):
         self.name = name
