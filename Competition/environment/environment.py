@@ -1,18 +1,17 @@
 # 定义步兵类
+import torch
+
 from data_generation import Task_Generator
 from gym import spaces
 from target import Army
 import random
 import secrets
+import numpy as np
 
 
 class Env():
     def __init__(self, num_infantry, num_catapult, num_outpost, num_shieldarray, num_buildings, num_Ballista,
                  num_agent):
-        # try:
-        #     self.target_check(num_infantry, num_catapult, num_outpost, num_shieldarray, num_buildings)
-        # except Exception:
-        #     print("任务目标数量错误，暂不生成目标")
 
         self.num_shieldArray = num_shieldarray
         self.num_outpost = num_outpost
@@ -30,27 +29,6 @@ class Env():
         self.shieldarray_list = []
         self.buildingobjective_list = []
         self.army_list = []
-
-    # def target_check(self, num_infantry, num_catapult, num_outpost, num_shieldarray, num_buildings):
-    #     if not 0 < num_infantry <= 10:
-    #         print("兵马类目标数量设置不合理")
-    #         return False
-    #     if not 0 < num_catapult <= 20:
-    #         print("投石车目标数量设置不合理")
-    #         return False
-    #     if not 0 < num_outpost <= 20:
-    #         print("前哨站目标数量设置不合理")
-    #         return False
-    #     if not 0 < num_shieldarray <= 20:
-    #         print("盾牌阵目标数量设置不合理")
-    #         return False
-    #     if not 0 < num_buildings <= 30:
-    #         print("建筑类目标数量设置不合理")
-    #         return False
-    #     if not num_infantry+num_catapult+num_outpost+num_shieldarray+num_buildings==60:
-    #         print("总目标数不为60，请重新设定")
-    #         return False
-    #     return True
 
     def InitializeArmy(self):
         self.army_list.append(Army("A", 30, 70, 60, 100, 100, 100))
@@ -70,8 +48,6 @@ class Env():
                                         self.num_buildings)
         self.infantry_list, self.catapult_list, self.outpost_list, self.shieldarray_list, self.buildingobjective_list = task_generator.target_generation()
 
-
-
     def reset(self):
         self.infantry_list.clear()
         self.catapult_list.clear()
@@ -86,116 +62,43 @@ class Env():
         return o_n
 
     def step(self, action_list):
-        # 使用传入的动作减少相应目标的血量
-
-        # 2.建立动作到目标的映射
-        # 3.减少HP值
-
-        # 反制阶段
-        # 魏国军队根据剩余军队数量进行反制打击
-        # 减少o_n中弩车数量
-
-        # 计算Reward
-
-        # 判断是否结束
-
-        # 返回o_n',r_n,d_n
-        # 每个军队智能体的动作选择范围应该为[0-14]
-        # 0-4 代表使用弩车攻击兵马类、投石车。。。。
-        # 5-9 代表使用火弩攻击兵马类、投石车。。。
-        # 10-14 代表使用药弩攻击兵马类、投石车。。。
-        # action_list 应该为10个军队智能体的动作 [ 1,3,5...13] 共30个数字
+        # 每个军队弩车的动作选择范围应该为[1,1,1,1,0,0,0......0]
+        # 索引值
+        # 0 代表no-op
+        # 1-100 代表使用弩车攻击兵马类、投石车。。。。
+        # 101-200 代表使用火弩攻击兵马类、投石车。。。
+        # 201-300 代表使用药弩攻击兵马类、投石车。。。
+        # action_list 应该为10个军队智能体的动作 每个军队的动作为[1,3,5...13] 共30个数字
         reward_list = []  # 奖励值列表
-        for army_index in range(len(action_list)):
-            # 1.判断动作是否有效（目标是否在攻击范围内 以及目标是否还存活）
-            action_avalible_list = []  # 可用动作列表
-            target_list = []  # 可打击目标列表
+        for army_index, actions in enumerate(action_list):
             reward = 0
-            for action_index in range(len(action_list[army_index])):
-                if 0 <= action_list[army_index][action_index] <= 4:
-                    crosstype = 0
-                elif 5 <= action_list[army_index][action_index] <= 9:
-                    crosstype = 1
-                elif 10 <= action_list[army_index][action_index] <= 14:
-                    crosstype = 2
-                target_type = action_list[army_index][action_index] % 5  # 目标建筑类型
-                target = self.targetChoice(target_type)
-                x, y, z = self.isActionAvailable(self.army_list[army_index], crosstype,
-                                                 target)
-                if x and y and z:
-                    print("随机挑选的目标为:" + target.name + " 目标当前HP:", target.HP)
-                    action_avalible_list.append(action_list[army_index][action_index])
-                    target_list.append(target)
-                # 该根据不同的有效目标设计不同的惩罚项
-                # (1) 若弓箭类型足够，距离也够，但打击目标已经被摧毁了 此时是否要给予惩罚，弩箭的数量是否需要减少？
-                elif x and y and not z:
-                    reward -= 10
-                # (2) 若弓箭类型不足够，距离够
-                # (3) 若弓箭类型足够，距离不够
+            for action_index, action in enumerate(actions):
+                if action == 0:
+                    continue  # no-op 不作操作
+                crosstype = self._get_crosstype(action)  # 获取箭弩类型
+                target = self._get_target(action)  # 获取被击打的目标
+                if not self.isTargetInDistance(self.army_list[army_index], target, crosstype):  # 如果超出距离限制，给予负奖励
+                    print("该目标不在打击范围内，奖励值降低")
+                    print("---------------------------------------------------------------")
+                    reward -= 100
+                    continue  # 跳过该动作
+                print("打击前的目标" + target.name + "血量为：", target.HP)
+                damage = target.BeAttacked(crosstype, self.shieldarray_list)
+                print("打击后的目标" + target.name + "血量为：", target.HP, "造成伤害", damage)
+                print("---------------------------------------------------------------")
+                if target.target_type == 0:
+                    reward += (damage + target.strike_ability) * 1.5
+                elif target.target_type == 1:
+                    reward += (damage + target.GetCurrentAbility(target.HP)) * 1.5
                 else:
-                    reward -= 15
-                    print("该次动作选择不可用")
-            # 2.实际打击阶段
-            if self.army_list[army_index].num_ballista == 0:
-                continue
-            if self.army_list[army_index].num_ballista >= len(
-                    action_avalible_list):  # 若剩余弩车数量大于等于可执行动作数量, 执行可用动作列表中的全部动作
-                for i in range(len(target_list)):
-                    # 消耗弩箭
+                    reward += damage * 1.5
+                if target.HP == 0:
+                    reward += 50
 
-                    crosstype = self.getCrossbowType(action_avalible_list[i])
-
-                    if crosstype == 0:
-                        self.army_list[army_index].num_bolt -= 1
-                    elif crosstype == 1:
-                        self.army_list[army_index].num_firebolt -= 1
-                    elif crosstype == 2:
-                        self.army_list[army_index].num_med_bolt -= 1
-                    # 目标被实际打击
-                    damage = target_list[i].BeAttacked(crosstype, self.shieldarray_list)
-
-                    print("打击后的目标" + target_list[i].name + "血量为：", target_list[i].HP, "造成伤害", damage)
-                    if target_list[i].target_type == 0:
-                        reward += (damage + target_list[i].strike_ability) * 1.5
-                    elif target_list[i].target_type == 1:
-                        reward += (damage + target_list[i].GetCurrentAbility(target_list[i].HP)) * 1.5
-                    else:
-                        reward += damage * 1.5
-                    # print(target.target_type, reward, damage)
-                    if target_list[i].HP == 0:  # 若目标被击毁 增加奖励值
-                        reward += 50
-                reward_list.append(reward)
-
-            else:  # 弩车剩余数量不足，则随机执行等于弩车数量的动作
-                temp_index = secrets.SystemRandom().sample(list(range(len(action_avalible_list))),
-                                                           self.army_list[army_index].num_ballista)  # 随机动作值索引列表
-                for i in temp_index:
-                    # 消耗弩箭
-                    crosstype = self.getCrossbowType(action_avalible_list[i])
-
-                    if crosstype == 0:
-                        self.army_list[army_index].num_bolt -= 1
-                    elif crosstype == 1:
-                        self.army_list[army_index].num_firebolt -= 1
-                    elif crosstype == 2:
-                        self.army_list[army_index].num_med_bolt -= 1
-
-                    # 目标被实际打击
-                    damage = target_list[i].BeAttacked(crosstype, self.shieldarray_list)
-                    print("打击后的目标" + target_list[i].name + "血量为：", target_list[i].HP, "造成伤害", damage)
-                    if target_list[i].target_type == 0:
-                        reward += (damage + target_list[i].strike_ability) * 1.5
-                    elif target_list[i].target_type == 1:
-                        reward += (damage + target_list[i].GetCurrentAbility(target_list[i].HP)) * 1.5
-                    else:
-                        reward += damage * 1.5
-                    if target_list[i].HP == 0:
-                        reward += 50
-                    # print(target.target_type, reward, damage)
-
-                reward_list.append(reward)
+            reward_list.append(reward)
         # 3.反制阶段
         # 3.1 兵马类目标反制
+
         for infantry in self.infantry_list:
             if infantry.HP > 0:  # 若兵马类目标血量不为0
                 i = ord(infantry.strike_army) - 65
@@ -217,6 +120,55 @@ class Env():
         for i in range(len(self.army_list)):
             o_n.append(self.getCurrentObs(i))
         return o_n, reward_list, done
+
+    def _get_crosstype(self, action_value):
+        if 0 < action_value <= 100:
+            cross_type = 0
+        elif 100 < action_value <= 200:
+            cross_type = 1
+        elif 200 < action_value <= 300:
+            cross_type = 2
+
+        return cross_type
+
+    def _get_target(self, action_value):
+        target_idx = action_value
+        if 100 < action_value <= 200:
+            target_idx -= 100
+        elif 200 < action_value <= 300:
+            target_idx -= 200
+
+        target = None
+        if 1 <= target_idx <= 10:
+            for infantry in self.infantry_list:
+                if infantry.idx_value == target_idx:
+                    target = infantry
+                    break
+        if 11 <= target_idx <= 30:
+            for catapult in self.catapult_list:
+                if catapult.idx_value == target_idx:
+                    target = catapult
+                    break
+        if 31 <= target_idx <= 50:
+            for outpost in self.outpost_list:
+                if outpost.idx_value == target_idx:
+                    target = outpost
+                    break
+        if 51 <= target_idx <= 70:
+            for shield in self.shieldarray_list:
+                if shield.idx_value == target_idx:
+                    target = shield
+                    break
+        if 71 <= target_idx <= 100:
+            for building in self.buildingobjective_list:
+                if building.idx_value == target_idx:
+                    target = building
+                    break
+
+        if target == None:
+            print("未找到该目标")
+        else:
+            return target
 
     def isDone(self):
         """
@@ -246,44 +198,6 @@ class Env():
                 return False
         return True
 
-    def targetChoice(self, target_type):
-        target = None
-        if target_type == 0:
-            target = random.choice(self.infantry_list)
-        elif target_type == 1:
-            target = random.choice(self.catapult_list)
-        elif target_type == 2:
-            target = random.choice(self.outpost_list)
-        elif target_type == 3:
-            target = random.choice(self.shieldarray_list)
-        elif target_type == 4:
-            target = random.choice(self.buildingobjective_list)
-
-        return target
-
-    def isActionAvailable(self, army, crosstype, target):
-        crossbow_b = False
-        distance_b = False
-        alive_b = True
-        # 判断动作是否可用
-        # 1.判断当前军队的弩箭数量是否足够
-        if self.isCrossbowEnough(army, crosstype):  # 若当前军队的特定弩箭类型数目足够
-            crossbow_b = True
-            # 2.判断当前打击目标是否足够距离
-            distance_b = self.isTargetInDistance(army, target, crosstype)
-            # 3.判断当前打击目标是否存活
-            alive_b = target.HP > 0
-        return crossbow_b, distance_b, alive_b
-
-    def isCrossbowEnough(self, army, crossbow_type):
-        # 根据弩箭类型判断数量是否足够
-        if crossbow_type == 0:
-            return army.num_bolt > 0
-        elif crossbow_type == 1:
-            return army.num_firebolt > 0
-        elif crossbow_type == 2:
-            return army.num_med_bolt > 0
-
     def isTargetInDistance(self, army, target, cross_type):
         """
         :param army: 当前军队
@@ -298,15 +212,6 @@ class Env():
         elif cross_type == 2:
             return (target.pos_x - army.pos_x) ** 2 + (target.pos_y - army.pos_y) ** 2 <= 600 ** 2
 
-    def getCrossbowType(self, index):
-        if 0 <= index <= 4:
-            crosstype = 0
-        elif 5 <= index <= 9:
-            crosstype = 1
-        elif 10 <= index <= 14:
-            crosstype = 2
-        return crosstype
-
     def getCurrentState(self):
         s = []
         for i in range(len(self.army_list)):
@@ -320,32 +225,77 @@ class Env():
         o.append(self.army_list[i].num_firebolt)
         o.append(self.army_list[i].num_med_bolt)
         return o
-# env = Env(10, 10, 10, 10, 20, 10, 10)
-# a = env.reset()
-#
-# action_list = [
-#     [
-#         1, 5, 9, 10, 11, 2
-#     ],
-#     [
-#         3, 6, 1, 0, 12, 14
-#     ]
-# ]
-# print(env.getCurrentState())
-# print("----------------------------------------")
-# env.step(action_list)
-# print(env.getCurrentState())
-# print("----------------------------------------")
-# env.step(action_list)
-# print(env.getCurrentState())
-# print("----------------------------------------")
-# env.step(action_list)
-# print(env.getCurrentState())
-# print("----------------------------------------")
-# env.step(action_list)
-# print(env.getCurrentState())
-# print("----------------------------------------")
-# env.step(action_list)
-# print(env.getCurrentState())
-# print("----------------------------------------")
-# print(env.step(action_list))
+
+    def get_army_by_name(self, name):
+        return self.army_list[ord(name) - 65]
+
+    def get_avail_army_actions(self, army_name):
+        # 返回的是单个弩车的可用动作
+        army = self.get_army_by_name(army_name)
+        avail_actions = [0] * 301
+        avail_actions[0] = 1  # 应该允许no-op的存在 若弩车被击毁视为no-op
+
+        bolt_b = True if army.num_bolt > 0 else False
+
+        firebolt_b = True if army.num_firebolt > 0 else False
+
+        medbolt_b = True if army.num_med_bolt > 0 else False
+
+        for infantry in self.infantry_list:
+            if bolt_b:
+                avail_actions[infantry.idx_value] = 1
+            if firebolt_b:
+                avail_actions[infantry.idx_value + 1 * 100] = 1
+            if medbolt_b:
+                avail_actions[infantry.idx_value + 2 * 100] = 1
+        for catapult in self.catapult_list:
+            if bolt_b:
+                avail_actions[catapult.idx_value] = 1
+            if firebolt_b:
+                avail_actions[catapult.idx_value + 1 * 100] = 1
+            if medbolt_b:
+                avail_actions[catapult.idx_value + 2 * 100] = 1
+        for outpost in self.outpost_list:
+            if bolt_b:
+                avail_actions[outpost.idx_value] = 1
+
+            if firebolt_b:
+                avail_actions[outpost.idx_value + 1 * 100] = 1
+            if medbolt_b:
+                avail_actions[outpost.idx_value + 2 * 100] = 1
+        for shieldarray in self.shieldarray_list:
+            if bolt_b:
+                avail_actions[shieldarray.idx_value] = 1
+
+            if firebolt_b:
+                avail_actions[shieldarray.idx_value + 1 * 100] = 1
+
+            if medbolt_b:
+                avail_actions[shieldarray.idx_value + 2 * 100] = 1
+        for building in self.buildingobjective_list:
+            if bolt_b:
+                avail_actions[building.idx_value] = 1
+            if firebolt_b:
+                avail_actions[building.idx_value + 1 * 100] = 1
+            if medbolt_b:
+                avail_actions[building.idx_value + 2 * 100] = 1
+
+        return avail_actions
+
+    def get_avail_actions(self):
+        avail_actions = []
+        for army in self.army_list:
+            avail_army = self.get_avail_army_actions(army.name)
+            avail_actions.append(avail_army)
+
+        return avail_actions
+
+
+env = Env(10, 10, 10, 10, 20, 30, 10)
+env.reset()
+action = env.get_avail_army_actions('A')
+action = np.nonzero(action)[0]
+action = action.tolist()
+action = [action]
+print(action)
+env.step(action)

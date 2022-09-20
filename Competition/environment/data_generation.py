@@ -9,11 +9,11 @@ class Task_Generator:
         self.num_outpost = num_outpost
         self.num_shield_array = num_shield_array
         self.num_buildings = num_buildings
-        self.infantry_df = pd.read_excel("data/Infantry.xlsx")
-        self.catapult_df = pd.read_excel('data/Catapult.xlsx')
-        self.outpost_df = pd.read_excel('data/Outpost.xlsx')
-        self.shield_df = pd.read_excel('data/ShieldArray.xlsx')
-        self.buildings_df = pd.read_excel('data/Buildings.xlsx')
+        self.infantry_df = pd.read_excel("../data/Infantry.xlsx")
+        self.catapult_df = pd.read_excel('../data/Catapult.xlsx')
+        self.outpost_df = pd.read_excel('../data/Outpost.xlsx')
+        self.shield_df = pd.read_excel('../data/ShieldArray.xlsx')
+        self.buildings_df = pd.read_excel('../data/Buildings.xlsx')
 
     def target_generation(self):
         infantry_list = []
@@ -31,25 +31,25 @@ class Task_Generator:
         for index, row in self.infantry_df.iterrows():
             infantry_list.append(
                 Infantry(row['name'], row['HP'], row['pos_x'], row['pos_y'], row['target_type'], row['strike_ability'],
-                         row['strike_army']))
+                         row['strike_army'], row['idx_value']))
 
         for index, row in self.catapult_df.iterrows():
             catapult_list.append(
-                Catapult(row['name'], row['HP'], row['pos_x'], row['pos_y'], row['target_type'], row['strike_army']))
+                Catapult(row['name'], row['HP'], row['pos_x'], row['pos_y'], row['target_type'], row['strike_army'], row['idx_value']))
 
         for index, row in self.outpost_df.iterrows():
             outpost_list.append(
                 Outpost(row['name'], row['HP'], row['pos_x'], row['pos_y'], row['target_type'],
-                        row['detection_radius']))
+                        row['detection_radius'], row['idx_value']))
 
         for index, row in self.shield_df.iterrows():
             shield_array_list.append(
                 ShieldArray(row['name'], row['HP'], row['pos_x'], row['pos_y'], row['target_type'],
-                            row['defend_radius'], row['defend_coefficient']))
+                            row['defend_radius'], row['defend_coefficient'], row['idx_value']))
 
         for index, row in self.buildings_df.iterrows():
             buildings_list.append(
-                BuildingObjective(row['name'], row['HP'], row['pos_x'], row['pos_y'], row['target_type']))
+                BuildingObjective(row['name'], row['HP'], row['pos_x'], row['pos_y'], row['target_type'], row['idx_value']))
 
         for i in range(len(shield_array_list)):
             shield_array_list[i].set_outpostlist(outpost_list)

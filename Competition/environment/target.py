@@ -2,7 +2,7 @@
 # Ballista 弩车
 # Catapult 投石车
 class Infantry():
-    def __init__(self, name, HP, pos_x, pos_y, target_type, strike_ability, strike_army):
+    def __init__(self, name, HP, pos_x, pos_y, target_type, strike_ability, strike_army, idx_value):
         self.name = name
         self.pos_x = pos_x
         self.pos_y = pos_y
@@ -11,6 +11,7 @@ class Infantry():
         self.HP = HP
         self.MAX_HP = HP
         self.strike_army = strike_army
+        self.idx_value = idx_value
 
     def HP_Recovery(self):
         if self.HP != 0:
@@ -57,13 +58,14 @@ class Infantry():
 
 
 class Catapult:
-    def __init__(self, name, HP, pos_x, pos_y, target_type, strike_army):
+    def __init__(self, name, HP, pos_x, pos_y, target_type, strike_army, idx_value):
         self.name = name
         self.pos_x = pos_x
         self.pos_y = pos_y
         self.HP = HP
         self.target_type = target_type
         self.strike_army = strike_army
+        self.idx_value = idx_value
 
     def GetCurrentAbility(self, HP):
         counteract_nums = 5
@@ -115,7 +117,7 @@ class Catapult:
 
 
 class Outpost:  # 定义前哨站
-    def __init__(self, name, HP, pos_x, pos_y, target_type, detection_radius):
+    def __init__(self, name, HP, pos_x, pos_y, target_type, detection_radius, idx_value):
         self.name = name
         self.pos_x = pos_x
         self.pos_y = pos_y
@@ -124,6 +126,7 @@ class Outpost:  # 定义前哨站
         self.detection_radius = detection_radius
         self.initial_HP = HP  # 初始HP
         self.initial_dr = detection_radius  # 初始监测半径
+        self.idx_value = idx_value
 
     def IsInDetected(self, tar_x, tar_y):  # 判断目标是否处于探测半径内
         return (tar_x - self.pos_x) ** 2 + (tar_y - self.pos_y) ** 2 <= self.detection_radius ** 2
@@ -178,7 +181,7 @@ class Outpost:  # 定义前哨站
 
 
 class ShieldArray:  # 定义盾牌阵
-    def __init__(self, name, HP, pos_x, pos_y, target_type, defend_radius, defend_coefficient):
+    def __init__(self, name, HP, pos_x, pos_y, target_type, defend_radius, defend_coefficient, idx_value):
         self.outpost_list = None
         self.name = name
         self.pos_x = pos_x
@@ -189,6 +192,7 @@ class ShieldArray:  # 定义盾牌阵
         self.initial_HP = HP
         self.initial_dc = defend_coefficient
         self.defend_radius = defend_radius  # 定义防卫半径
+        self.idx_value = idx_value
 
     def set_outpostlist(self, outpost_list):
         self.outpost_list = outpost_list
@@ -297,13 +301,15 @@ class ShieldArray:  # 定义盾牌阵
             self.HP = 0
         return actual_damage
 
+
 class BuildingObjective:  # 定义建筑目标
-    def __init__(self, name, HP, pos_x, pos_y, target_type):
+    def __init__(self, name, HP, pos_x, pos_y, target_type, idx_value):
         self.name = name
         self.pos_x = pos_x
         self.pos_y = pos_y
         self.HP = HP
         self.target_type = target_type
+        self.idx_value = idx_value
 
     def BeAttacked(self, crossbow_type, shield_array_list):
         """
@@ -363,5 +369,3 @@ class Army:
             self.num_ballista -= num_U
         else:
             self.num_ballista = 0
-
-
