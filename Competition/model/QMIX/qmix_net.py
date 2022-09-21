@@ -23,7 +23,7 @@ class QMixNet(nn.Module):
             )
         else:
             self.hyper_w1 = nn.Linear(args.state_shape, args.n_agents * args.qmix_hidden_dim)
-            self.hyper_w2 = nn.Linear(args.state_shape, args.qmin_hidden_dim * 1)
+            self.hyper_w2 = nn.Linear(args.state_shape, args.qmix_hidden_dim * 1)
 
         self.hyper_b1 = nn.Linear(args.state_shape, args.qmix_hidden_dim)
         # hyper_w2得到的(经验条数，1)的矩阵需要同样维度的hyper_b1

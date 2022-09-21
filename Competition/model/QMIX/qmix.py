@@ -1,7 +1,7 @@
 import torch
 import os
-from base_net import RNN
-from qmix_net import QMixNet
+from model.QMIX.base_net import RNN
+from model.QMIX.qmix_net import QMixNet
 
 
 class QMIX:
@@ -17,7 +17,7 @@ class QMIX:
         if args.reuse_network:
             input_shape += self.n_agents
 
-        self.eval_rnn  # 神经网络
+
         self.eval_rnn = RNN(input_shape, args)  # 每个agent选动作的网络
         self.target_rnn = RNN(input_shape, args)
         self.eval_qmix_net = QMixNet(args)  # 把agentsQ值加起来的网络
@@ -29,7 +29,7 @@ class QMIX:
             self.target_rnn.cuda()
             self.eval_qmix_net.cuda()
             self.target_qmix_net.cuda()
-        self.model_dir = args.model_dir + '/' + args.alg + '/' + args.map
+        self.model_dir = args.model_dir + '/' + args.alg
 
         self.target_rnn.load_state_dict(self.eval_rnn.state_dict())
         self.target_qmix_net.load_state_dict(self.eval_qmix_net.state_dict())
@@ -153,3 +153,10 @@ class QMIX:
     def init_hidden(self, episode_num):
         self.eval_hidden = torch.zeros((episode_num, self.n_agents, self.args.rnn_hidden_dim))
         self.target_hidden = torch.zeros((episode_num, self.n_agents, self.args.rnn_hidden_dim))
+
+    def save_model(self, train_step):
+        num = str(train_step // self.args.save_cycle)
+        if not os.path.exists(self.model_dir):
+            os.makedirs(self.model_dir)
+        torch.save(self.eval_qmix_net.state_dict(), self.model_dir + '/' + num + '_qmix_net_params.pkl')
+        torch.save(self.eval_rnn.state_dict(), self.model_dir + '/' + num + '_rnn_net_params.pkl')

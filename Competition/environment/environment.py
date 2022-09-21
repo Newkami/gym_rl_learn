@@ -1,12 +1,8 @@
 # 定义步兵类
 import torch
 
-from data_generation import Task_Generator
-from gym import spaces
-from target import Army
-import random
-import secrets
-import numpy as np
+from environment.data_generation import Task_Generator
+from environment.target import Army
 
 
 class Env():
@@ -20,8 +16,6 @@ class Env():
         self.num_buildings = num_buildings
         self.num_Ballista = num_Ballista
         self.num_agent = num_agent
-        self.action_space = spaces.Discrete(180)
-        self.observation_space = None
 
         self.infantry_list = []
         self.catapult_list = []
@@ -92,8 +86,16 @@ class Env():
                     reward += (damage + target.GetCurrentAbility(target.HP)) * 1.5
                 else:
                     reward += damage * 1.5
-                if target.HP == 0:
+                if target.HP == 0 and damage != 0:
                     reward += 50
+
+                # 消耗弩箭
+                if crosstype == 0:
+                    self.army_list[army_index].num_bolt -= 1
+                elif crosstype == 1:
+                    self.army_list[army_index].num_firebolt -= 1
+                elif crosstype == 2:
+                    self.army_list[army_index].num_med_bolt -= 1
 
             reward_list.append(reward)
         # 3.反制阶段
@@ -116,10 +118,7 @@ class Env():
 
         done = self.isDone()
 
-        o_n = []
-        for i in range(len(self.army_list)):
-            o_n.append(self.getCurrentObs(i))
-        return o_n, reward_list, done
+        return reward_list, done
 
     def _get_crosstype(self, action_value):
         if 0 < action_value <= 100:
@@ -226,6 +225,12 @@ class Env():
         o.append(self.army_list[i].num_med_bolt)
         return o
 
+    def getObs(self):
+        o_n = []
+        for i in range(len(self.army_list)):
+            o_n.append(self.getCurrentObs(i))
+        return o_n
+
     def get_army_by_name(self, name):
         return self.army_list[ord(name) - 65]
 
@@ -280,22 +285,24 @@ class Env():
             if medbolt_b:
                 avail_actions[building.idx_value + 2 * 100] = 1
 
-        return avail_actions
+        return avail_actions, army.num_ballista
 
     def get_avail_actions(self):
         avail_actions = []
         for army in self.army_list:
-            avail_army = self.get_avail_army_actions(army.name)
+            avail_army, _ = self.get_avail_army_actions(army.name)
             avail_actions.append(avail_army)
 
         return avail_actions
 
+# env = Env(10, 10, 10, 10, 20, 30, 10)
+# env.reset()
+# action = env.get_avail_army_actions('A')
+# action = np.nonzero(action)[0]
+# action = action.tolist()
+# action = [action]
+# print(action)
+# env.step(action)
 
-env = Env(10, 10, 10, 10, 20, 30, 10)
-env.reset()
-action = env.get_avail_army_actions('A')
-action = np.nonzero(action)[0]
-action = action.tolist()
-action = [action]
-print(action)
-env.step(action)
+# last_action = np.zeros((10, 300))
+# print(last_action)

@@ -78,5 +78,3 @@ class ReplayBuffer:
             idx = idx[0]
         return idx
 
-
-replay_buffer = ReplayBuffer()
