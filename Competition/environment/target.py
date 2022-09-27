@@ -1,6 +1,11 @@
 # infantry 步兵
 # Ballista 弩车
 # Catapult 投石车
+import random
+
+import numpy as np
+
+
 class Infantry():
     def __init__(self, name, HP, pos_x, pos_y, target_type, strike_ability, strike_army, idx_value):
         self.name = name
@@ -363,9 +368,36 @@ class Army:
         self.num_bolt = num_bolt
         self.num_firebolt = num_firebolt
         self.num_med_bolt = num_med_bolt
+        self.ballista_list = []
+        for i in range(num_ballista):
+            self.ballista_list.append(Ballista(1, self.name))
 
     def BeAttacked(self, num_U):
+
+        tmp_ballista = self.num_ballista
+        print(self.name + "军队现有弩车数量：", tmp_ballista, "欲摧毁", num_U, "架弩车")
         if self.num_ballista - num_U >= 0:
             self.num_ballista -= num_U
         else:
             self.num_ballista = 0
+
+        print(self.name + "军队实际被摧毁数量：", tmp_ballista - self.num_ballista)
+        alive_list = []
+        for ballista in self.ballista_list:
+            alive_list.append(ballista.is_alive)
+
+        alive_ind = np.nonzero(alive_list)[0]  # 有可能为[]，或者长度小于num_U
+
+        if 0 <= len(alive_ind) < num_U:
+            rd_ind = alive_ind
+        else:
+            rd_ind = random.sample(list(alive_ind), num_U)
+
+        for i in rd_ind:
+            self.ballista_list[i].is_alive = 0
+
+
+class Ballista:
+    def __init__(self, is_alive=1, army=None):
+        self.is_alive = is_alive
+        self.army = army

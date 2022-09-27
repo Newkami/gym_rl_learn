@@ -15,24 +15,26 @@ class ReplayBuffer:
         self.current_idx = 0
         self.current_size = 0
         # create the buffer to store info
-        self.buffers = {'o': np.empty([self.size, self.episode_limit, self.n_agents, self.obs_shape]),
-                        'u': np.empty([self.size, self.episode_limit, self.n_agents, 1]),
-                        's': np.empty([self.size, self.episode_limit, self.state_shape]),
-                        'r': np.empty([self.size, self.episode_limit, 1]),
-                        'o_next': np.empty([self.size, self.episode_limit, self.n_agents, self.obs_shape]),
-                        's_next': np.empty([self.size, self.episode_limit, self.state_shape]),
-                        'avail_u': np.empty([self.size, self.episode_limit, self.n_agents, self.n_actions]),
-                        'avail_u_next': np.empty([self.size, self.episode_limit, self.n_agents, self.n_actions]),
-                        'u_onehot': np.empty([self.size, self.episode_limit, self.n_agents, self.n_actions]),
-                        'padded': np.empty([self.size, self.episode_limit, 1]),
-                        'terminated': np.empty([self.size, self.episode_limit, 1])
+        self.buffers = {'o': np.empty([self.size, self.episode_limit, self.n_agents, self.obs_shape], dtype=np.float16),
+                        'u': np.empty([self.size, self.episode_limit, self.n_agents, 1], dtype=np.float16),
+                        's': np.empty([self.size, self.episode_limit, self.state_shape], dtype=np.float16),
+                        'r': np.empty([self.size, self.episode_limit, 1], dtype=np.float16),
+                        'o_next': np.empty([self.size, self.episode_limit, self.n_agents, self.obs_shape],
+                                           dtype=np.float16),
+                        's_next': np.empty([self.size, self.episode_limit, self.state_shape], dtype=np.float16),
+                        'avail_u': np.empty([self.size, self.episode_limit, self.n_agents, self.n_actions],
+                                            dtype=np.float16),
+                        'avail_u_next': np.empty([self.size, self.episode_limit, self.n_agents, self.n_actions],
+                                                 dtype=np.float16),
+                        'u_onehot': np.empty([self.size, self.episode_limit, self.n_agents, self.n_actions],
+                                             dtype=np.float16),
+                        'padded': np.empty([self.size, self.episode_limit, 1], dtype=np.float16),
+                        'terminated': np.empty([self.size, self.episode_limit, 1], dtype=np.float16)
                         }
-        if self.args.alg == 'maven':
-            self.buffers['z'] = np.empty([self.size, self.args.noise_dim])
-        # thread lock
         self.lock = threading.Lock()
 
         # store the episode
+
     def store_episode(self, episode_batch):
         batch_size = episode_batch['o'].shape[0]  # episode_number
         with self.lock:
@@ -77,4 +79,3 @@ class ReplayBuffer:
         if inc == 1:
             idx = idx[0]
         return idx
-

@@ -1,4 +1,7 @@
 # 定义步兵类
+import time
+
+import numpy as np
 import torch
 
 from environment.data_generation import Task_Generator
@@ -25,6 +28,7 @@ class Env():
         self.army_list = []
 
     def InitializeArmy(self):
+
         self.army_list.append(Army("A", 30, 70, 60, 100, 100, 100))
         self.army_list.append(Army("B", 30, 60, 180, 200, 100, 0))
         self.army_list.append(Army("C", 30, 40, 360, 0, 150, 150))
@@ -48,10 +52,11 @@ class Env():
         self.shieldarray_list.clear()
         self.outpost_list.clear()
         self.buildingobjective_list.clear()
+        self.army_list.clear()
         self.InitializeEnv()
         self.InitializeArmy()
         o_n = []
-        for i in range(len(self.army_list)):
+        for i in range(300):
             o_n.append(self.getCurrentObs(i))
         return o_n
 
@@ -62,45 +67,50 @@ class Env():
         # 1-100 代表使用弩车攻击兵马类、投石车。。。。
         # 101-200 代表使用火弩攻击兵马类、投石车。。。
         # 201-300 代表使用药弩攻击兵马类、投石车。。。
-        # action_list 应该为10个军队智能体的动作 每个军队的动作为[1,3,5...13] 共30个数字
+        print("----------------------------新回合开始-------------------------------------")
         reward_list = []  # 奖励值列表
-        for army_index, actions in enumerate(action_list):
+        for index, action in enumerate(action_list):
+            army_index = self._get_armyindex(index)
             reward = 0
-            for action_index, action in enumerate(actions):
-                if action == 0:
-                    continue  # no-op 不作操作
-                crosstype = self._get_crosstype(action)  # 获取箭弩类型
-                target = self._get_target(action)  # 获取被击打的目标
-                if not self.isTargetInDistance(self.army_list[army_index], target, crosstype):  # 如果超出距离限制，给予负奖励
-                    print("该目标不在打击范围内，奖励值降低")
-                    print("---------------------------------------------------------------")
-                    reward -= 100
-                    continue  # 跳过该动作
-                print("打击前的目标" + target.name + "血量为：", target.HP)
-                damage = target.BeAttacked(crosstype, self.shieldarray_list)
-                print("打击后的目标" + target.name + "血量为：", target.HP, "造成伤害", damage)
-                print("---------------------------------------------------------------")
-                if target.target_type == 0:
-                    reward += (damage + target.strike_ability) * 1.5
-                elif target.target_type == 1:
-                    reward += (damage + target.GetCurrentAbility(target.HP)) * 1.5
-                else:
-                    reward += damage * 1.5
-                if target.HP == 0 and damage != 0:
-                    reward += 50
+            # for action_index, action in enumerate(actions):
+            if action == 0:
+                print(index, "--------------------------No-Op-----------------------------")
+                print("该弩车智能体已经被击毁，不做操作")
+                reward_list.append(reward)
+                continue  # no-op 不作操作
+            crosstype = self._get_crosstype(action)  # 获取箭弩类型
+            target = self._get_target(action)  # 获取被击打的目标
+            if not self.isTargetInDistance(self.army_list[army_index], target, crosstype):  # 如果超出距离限制，给予负奖励
+                print(index, "--------------------------该目标不在打击范围内，奖励值降低-----------------------------")
+                reward -= 20
+                reward_list.append(reward)
+                continue  # 跳过该动作
+            print(index, "--------------------------目标可被打击-----------------------------")
+            print("打击前的目标" + target.name + "血量为：", target.HP)
+            damage = target.BeAttacked(crosstype, self.shieldarray_list)
+            print("打击后的目标" + target.name + "血量为：", target.HP, "造成伤害", damage)
+            print("---------------------------------------------------------------")
+            if target.target_type == 0:
+                reward += (damage + target.strike_ability) * 1.5
+            elif target.target_type == 1:
+                reward += (damage + target.GetCurrentAbility(target.HP)) * 1.5
+            else:
+                reward += damage * 1.5
+            if target.HP == 0 and damage != 0:
+                reward += 50
 
-                # 消耗弩箭
-                if crosstype == 0:
-                    self.army_list[army_index].num_bolt -= 1
-                elif crosstype == 1:
-                    self.army_list[army_index].num_firebolt -= 1
-                elif crosstype == 2:
-                    self.army_list[army_index].num_med_bolt -= 1
+            # 消耗弩箭
+            if crosstype == 0:
+                self.army_list[army_index].num_bolt -= 1
+            elif crosstype == 1:
+                self.army_list[army_index].num_firebolt -= 1
+            elif crosstype == 2:
+                self.army_list[army_index].num_med_bolt -= 1
 
             reward_list.append(reward)
         # 3.反制阶段
         # 3.1 兵马类目标反制
-
+        print("----------------------------反制阶段开始----------------------------------")
         for infantry in self.infantry_list:
             if infantry.HP > 0:  # 若兵马类目标血量不为0
                 i = ord(infantry.strike_army) - 65
@@ -113,12 +123,38 @@ class Env():
                 i = ord(catapult.strike_army) - 65
                 self.army_list[i].BeAttacked(catapult.GetCurrentAbility(catapult.HP))
 
-        print(reward_list)
         # 反制阶段结束
+        reward = np.mean(reward_list)
+        done, win_tag = self.isDone()
+        reward -= 10  # 每经过一个回合奖励值降低
 
-        done = self.isDone()
+        print("该回合获得的奖励值为：", reward)
+        time.sleep(1)
+        return reward, done, win_tag
 
-        return reward_list, done
+    def _get_armyindex(self, action_index):
+        if 0 <= action_index < 30:
+            army_ind = 0
+        elif 30 <= action_index < 60:
+            army_ind = 1
+        elif 60 <= action_index < 90:
+            army_ind = 2
+        elif 90 <= action_index < 120:
+            army_ind = 3
+        elif 120 <= action_index < 150:
+            army_ind = 4
+        elif 150 <= action_index < 180:
+            army_ind = 5
+        elif 180 <= action_index < 210:
+            army_ind = 6
+        elif 210 <= action_index < 240:
+            army_ind = 7
+        elif 240 <= action_index < 270:
+            army_ind = 8
+        elif 270 <= action_index < 300:
+            army_ind = 9
+
+        return army_ind
 
     def _get_crosstype(self, action_value):
         if 0 < action_value <= 100:
@@ -172,30 +208,43 @@ class Env():
     def isDone(self):
         """
                 # 判断当前回合是否结束
-                # 1. 军队全部阵亡
+                # 1. 军队弩车全部阵亡
                 # 2. 目标全部被击毁
         :return:
         """
+        army_alive = self._get_army_state()
+        target_alive = self._get_target_state()
+        win_tag = False
+        if army_alive and not target_alive:
+            win_tag = False
+        if not army_alive or not target_alive:
+            return True, win_tag
+        else:
+            return False, win_tag
+
+    def _get_army_state(self):
         for army in self.army_list:
             if army.num_ballista != 0:
-                return False
+                return True
+        return False
 
+    def _get_target_state(self):
         for infantry in self.infantry_list:
             if infantry.HP != 0:
-                return False
+                return True
         for catapult in self.catapult_list:
             if catapult.HP != 0:
-                return False
+                return True
         for outpost in self.outpost_list:
             if outpost.HP != 0:
-                return False
+                return True
         for shieldarray in self.shieldarray_list:
             if shieldarray.HP != 0:
-                return False
+                return True
         for building in self.buildingobjective_list:
             if building.HP != 0:
-                return False
-        return True
+                return True
+        return False
 
     def isTargetInDistance(self, army, target, cross_type):
         """
@@ -219,15 +268,17 @@ class Env():
 
     def getCurrentObs(self, i):
         o = []
-        o.append(self.army_list[i].num_ballista)
-        o.append(self.army_list[i].num_bolt)
-        o.append(self.army_list[i].num_firebolt)
-        o.append(self.army_list[i].num_med_bolt)
+        army_ind = self._get_armyindex(i)
+        o.append(self.army_list[army_ind].ballista_list[i % 30].is_alive)
+        o.append(self.army_list[army_ind].num_ballista)
+        o.append(self.army_list[army_ind].num_bolt)
+        o.append(self.army_list[army_ind].num_firebolt)
+        o.append(self.army_list[army_ind].num_med_bolt)
         return o
 
     def getObs(self):
         o_n = []
-        for i in range(len(self.army_list)):
+        for i in range(100):
             o_n.append(self.getCurrentObs(i))
         return o_n
 

@@ -2,7 +2,6 @@ import numpy as np
 import torch
 
 
-
 class RolloutWorker:
     def __init__(self, env, agents, args):
         self.env = env
@@ -42,27 +41,27 @@ class RolloutWorker:
             state = self.env.getCurrentState()
             actions, avail_actions, actions_onehot = [], [], []
             for agent_id in range(self.n_agents):
-                avail_action, num_ballista = self.env.get_avail_army_actions(chr(agent_id + 65))  # 可用动作的索引值
-                action = self.agents.choose_action(obs[agent_id], last_action[agent_id], agent_id, avail_action,
-                                                   epsilon, num_ballista)
-
+                avail_action, num_ballista = self.env.get_avail_army_actions(
+                    chr(self._get_armyindex(agent_id) + 65))  # 可用动作的索引值
+                is_alive = self.env.army_list[self.env._get_armyindex(agent_id)].ballista_list[agent_id % 30].is_alive
+                if is_alive:
+                    action = self.agents.choose_action(obs[agent_id], last_action[agent_id], agent_id, avail_action,
+                                                       epsilon, num_ballista)
+                else:
+                    action = 0
                 # 为动作值产生one-hot
 
-                action_onehot = []
-                for i in action:
-                    temp = np.zeros(301)
-                    temp[i] = 1
-                    action_onehot.append(temp)
-                action_onehot = np.array(action_onehot)
-
+                action_onehot = np.zeros(self.args.n_actions)
+                action_onehot[action] = 1
                 actions.append(np.int(action))
                 actions_onehot.append(action_onehot)
                 avail_actions.append(avail_action)
                 last_action[agent_id] = action_onehot
 
-            reward, done = self.env.step(actions)
+            reward, terminated, win = self.env.step(actions)
 
-            win_tag = True if terminated else False
+            # win_tag = True if terminated else False
+            win_tag = win
             o.append(obs)
             s.append(state)
             u.append(np.reshape(actions, [self.n_agents, 1]))
@@ -89,7 +88,8 @@ class RolloutWorker:
         # get avail_action for last obs，because target_q needs avail_action in training
         avail_actions = []
         for agent_id in range(self.n_agents):
-            avail_action = self.env.get_avail_agent_actions(chr(agent_id + 65))
+            avail_action, num_ballista = self.env.get_avail_army_actions(
+                chr(self._get_armyindex(agent_id) + 65))  # 可用动作的索引值
             avail_actions.append(avail_action)
         avail_u.append(avail_actions)
         avail_u_next = avail_u[1:]
@@ -128,3 +128,27 @@ class RolloutWorker:
             self.epsilon = epsilon
             # print('Epsilon is ', self.epsilon)
         return episode, episode_reward, win_tag, step
+
+    def _get_armyindex(self, action_index):
+        if 0 <= action_index < 30:
+            army_ind = 0
+        elif 30 <= action_index < 60:
+            army_ind = 1
+        elif 60 <= action_index < 90:
+            army_ind = 2
+        elif 90 <= action_index < 120:
+            army_ind = 3
+        elif 120 <= action_index < 150:
+            army_ind = 4
+        elif 150 <= action_index < 180:
+            army_ind = 5
+        elif 180 <= action_index < 210:
+            army_ind = 6
+        elif 210 <= action_index < 240:
+            army_ind = 7
+        elif 240 <= action_index < 270:
+            army_ind = 8
+        elif 270 <= action_index < 300:
+            army_ind = 9
+
+        return army_ind

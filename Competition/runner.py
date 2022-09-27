@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 class Runner:
     def __init__(self, env, args):
-        self.env = env
+        self.env = enva
 
         self.agents = Agents(args)
         self.rolloutWorker = RolloutWorker(env, self.agents, args)
@@ -26,12 +26,12 @@ class Runner:
 
         while time_steps < self.args.n_steps:
             print('Run {}, time_steps {}'.format(num, time_steps))
-            if time_steps // self.args.evaluate_cycle > evaluate_steps:
+            if time_steps / / self.args.evaluate_cycle > evaluate_steps:
                 win_rate, episode_reward = self.evaluate()
                 # print('win_rate is ', win_rate)
                 self.win_rates.append(win_rate)
                 self.episode_rewards.append(episode_reward)
-                self.plt(num)
+                # self.plt(num)
                 evaluate_steps += 1
             episodes = []
             # 收集self.args.n_episodes个episodes
@@ -47,16 +47,12 @@ class Runner:
             for episode in episodes:
                 for key in episode_batch.keys():
                     episode_batch[key] = np.concatenate((episode_batch[key], episode[key]), axis=0)
-            if self.args.alg.find('coma') > -1 or self.args.alg.find('central_v') > -1 or self.args.alg.find(
-                    'reinforce') > -1:
-                self.agents.train(episode_batch, train_steps, self.rolloutWorker.epsilon)
+
+            self.buffer.store_episode(episode_batch)
+            for train_step in range(self.args.train_steps):
+                mini_batch = self.buffer.sample(min(self.buffer.current_size, self.args.batch_size))
+                self.agents.train(mini_batch, train_steps)
                 train_steps += 1
-            else:
-                self.buffer.store_episode(episode_batch)
-                for train_step in range(self.args.train_steps):
-                    mini_batch = self.buffer.sample(min(self.buffer.current_size, self.args.batch_size))
-                    self.agents.train(mini_batch, train_steps)
-                    train_steps += 1
             win_rate, episode_reward = self.evaluate()
             print('win_rate is ', win_rate)
             self.win_rates.append(win_rate)

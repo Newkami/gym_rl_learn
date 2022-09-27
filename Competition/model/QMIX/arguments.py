@@ -54,4 +54,6 @@ def get_mixer_args(args):
     # how often to update the target_net
     args.target_update_cycle = 200
 
+    # prevent gradient explosion
+    args.grad_norm_clip = 10
     return args
