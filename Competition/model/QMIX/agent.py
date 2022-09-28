@@ -12,7 +12,7 @@ class Agents:
         self.policy = QMIX(args)
         self.args = args
 
-    def choose_action(self, obs, last_action, agent_num, avail_actions, epsilon, num_ballista):
+    def choose_action(self, obs, last_action, agent_num, avail_actions, epsilon):
         inputs = obs.copy()
         avail_actions_ind = np.nonzero(avail_actions)[0]  # 返回一个数组非零数值的各个角标
 

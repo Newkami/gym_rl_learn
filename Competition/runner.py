@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 class Runner:
     def __init__(self, env, args):
-        self.env = enva
+        self.env = env
 
         self.agents = Agents(args)
         self.rolloutWorker = RolloutWorker(env, self.agents, args)
@@ -24,18 +24,18 @@ class Runner:
     def run(self, num):
         time_steps, train_steps, evaluate_steps = 0, 0, -1
 
-        while time_steps < self.args.n_steps:
+        while time_steps < self.args.n_steps:  # 2000000
             print('Run {}, time_steps {}'.format(num, time_steps))
-            if time_steps / / self.args.evaluate_cycle > evaluate_steps:
+            if time_steps // self.args.evaluate_cycle > evaluate_steps:
                 win_rate, episode_reward = self.evaluate()
                 # print('win_rate is ', win_rate)
                 self.win_rates.append(win_rate)
                 self.episode_rewards.append(episode_reward)
-                # self.plt(num)
+                self.plt(num)
                 evaluate_steps += 1
             episodes = []
             # 收集self.args.n_episodes个episodes
-            for episode_idx in range(self.args.n_episodes):
+            for episode_idx in range(self.args.n_episodes): # 在一次训练之前episode的数量
                 episode, _, _, steps = self.rolloutWorker.generate_episode(episode_idx)
                 episodes.append(episode)
                 time_steps += steps
@@ -57,33 +57,33 @@ class Runner:
             print('win_rate is ', win_rate)
             self.win_rates.append(win_rate)
             self.episode_rewards.append(episode_reward)
-            # self.plt(num)
+            self.plt(num)
 
     def evaluate(self):
-            win_number = 0
-            episode_rewards = 0
-            for epoch in range(self.args.evaluate_epoch):
-                _, episode_reward, win_tag, _ = self.rolloutWorker.generate_episode(epoch, evaluate=True)
-                episode_rewards += episode_reward
-                if win_tag:
-                    win_number += 1
-            return win_number / self.args.evaluate_epoch, episode_rewards / self.args.evaluate_epoch
+        win_number = 0
+        episode_rewards = 0
+        for epoch in range(self.args.evaluate_epoch):  # 跑32个epoch，看胜率和，episode_reward 1个epoch最多有几个回合
+            _, episode_reward, win_tag, _ = self.rolloutWorker.generate_episode(epoch, evaluate=True)
+            episode_rewards += episode_reward
+            if win_tag:
+                win_number += 1
+        return win_number / self.args.evaluate_epoch, episode_rewards / self.args.evaluate_epoch
 
     def plt(self, num):
-            plt.figure()
-            plt.ylim([0, 105])
-            plt.cla()
-            plt.subplot(2, 1, 1)
-            plt.plot(range(len(self.win_rates)), self.win_rates)
-            plt.xlabel('step*{}'.format(self.args.evaluate_cycle))
-            plt.ylabel('win_rates')
+        plt.figure()
+        plt.ylim([0, 105])
+        plt.cla()
+        plt.subplot(2, 1, 1)
+        plt.plot(range(len(self.win_rates)), self.win_rates)
+        plt.xlabel('step*{}'.format(self.args.evaluate_cycle))
+        plt.ylabel('win_rates')
 
-            plt.subplot(2, 1, 2)
-            plt.plot(range(len(self.episode_rewards)), self.episode_rewards)
-            plt.xlabel('step*{}'.format(self.args.evaluate_cycle))
-            plt.ylabel('episode_rewards')
+        plt.subplot(2, 1, 2)
+        plt.plot(range(len(self.episode_rewards)), self.episode_rewards)
+        plt.xlabel('step*{}'.format(self.args.evaluate_cycle))
+        plt.ylabel('episode_rewards')
 
-            plt.savefig(self.save_path + '/plt_{}.png'.format(num), format='png')
-            np.save(self.save_path + '/win_rates_{}'.format(num), self.win_rates)
-            np.save(self.save_path + '/episode_rewards_{}'.format(num), self.episode_rewards)
-            plt.close()
+        plt.savefig(self.save_path + '/plt_{}.png'.format(num), format='png')
+        np.save(self.save_path + '/win_rates_{}'.format(num), self.win_rates)
+        np.save(self.save_path + '/episode_rewards_{}'.format(num), self.episode_rewards)
+        plt.close()

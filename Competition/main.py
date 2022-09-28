@@ -6,11 +6,11 @@ if __name__ == '__main__':
     args = get_common_args()
     args = get_mixer_args(args)
     args.n_actions = 301
-    args.n_agents = 100
+    args.n_agents = 300
     args.state_shape = 10
     args.obs_shape = 5
-    args.episode_limit = 15
-    env = Env(10, 10, 10, 10, 20, 30, 10)
+    args.episode_limit = 20
+    env = Env(5, 5, 2, 3, 5, 30, 10)
     env.reset()
     runner = Runner(env, args)
-    runner.run(0)
+    runner.run(1)

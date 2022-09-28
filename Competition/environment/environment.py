@@ -10,7 +10,7 @@ from environment.target import Army
 
 class Env():
     def __init__(self, num_infantry, num_catapult, num_outpost, num_shieldarray, num_buildings, num_Ballista,
-                 num_agent):
+                 num_army):
 
         self.num_shieldArray = num_shieldarray
         self.num_outpost = num_outpost
@@ -18,7 +18,7 @@ class Env():
         self.num_infantry = num_infantry
         self.num_buildings = num_buildings
         self.num_Ballista = num_Ballista
-        self.num_agent = num_agent
+        self.num_army = num_army
 
         self.infantry_list = []
         self.catapult_list = []
@@ -129,7 +129,10 @@ class Env():
         reward -= 10  # 每经过一个回合奖励值降低
 
         print("该回合获得的奖励值为：", reward)
-        time.sleep(1)
+        print("该回合是否结束：", done)
+        print("该回合是否胜利：", win_tag)
+        self._get_HP_information()
+        # time.sleep(0.2)
         return reward, done, win_tag
 
     def _get_armyindex(self, action_index):
@@ -216,7 +219,7 @@ class Env():
         target_alive = self._get_target_state()
         win_tag = False
         if army_alive and not target_alive:
-            win_tag = False
+            win_tag = True
         if not army_alive or not target_alive:
             return True, win_tag
         else:
@@ -230,19 +233,19 @@ class Env():
 
     def _get_target_state(self):
         for infantry in self.infantry_list:
-            if infantry.HP != 0:
+            if infantry.HP > 0:
                 return True
         for catapult in self.catapult_list:
-            if catapult.HP != 0:
+            if catapult.HP > 0:
                 return True
         for outpost in self.outpost_list:
-            if outpost.HP != 0:
+            if outpost.HP > 0:
                 return True
         for shieldarray in self.shieldarray_list:
-            if shieldarray.HP != 0:
+            if shieldarray.HP > 0:
                 return True
         for building in self.buildingobjective_list:
-            if building.HP != 0:
+            if building.HP > 0:
                 return True
         return False
 
@@ -278,7 +281,7 @@ class Env():
 
     def getObs(self):
         o_n = []
-        for i in range(100):
+        for i in range(300):
             o_n.append(self.getCurrentObs(i))
         return o_n
 
@@ -298,45 +301,49 @@ class Env():
         medbolt_b = True if army.num_med_bolt > 0 else False
 
         for infantry in self.infantry_list:
-            if bolt_b:
-                avail_actions[infantry.idx_value] = 1
-            if firebolt_b:
-                avail_actions[infantry.idx_value + 1 * 100] = 1
-            if medbolt_b:
-                avail_actions[infantry.idx_value + 2 * 100] = 1
+            if infantry.HP > 0:
+                if bolt_b:
+                    avail_actions[infantry.idx_value] = 1
+                if firebolt_b:
+                    avail_actions[infantry.idx_value + 1 * 100] = 1
+                if medbolt_b:
+                    avail_actions[infantry.idx_value + 2 * 100] = 1
         for catapult in self.catapult_list:
-            if bolt_b:
-                avail_actions[catapult.idx_value] = 1
-            if firebolt_b:
-                avail_actions[catapult.idx_value + 1 * 100] = 1
-            if medbolt_b:
-                avail_actions[catapult.idx_value + 2 * 100] = 1
+            if catapult.HP > 0:
+                if bolt_b:
+                    avail_actions[catapult.idx_value] = 1
+                if firebolt_b:
+                    avail_actions[catapult.idx_value + 1 * 100] = 1
+                if medbolt_b:
+                    avail_actions[catapult.idx_value + 2 * 100] = 1
         for outpost in self.outpost_list:
-            if bolt_b:
-                avail_actions[outpost.idx_value] = 1
-
-            if firebolt_b:
-                avail_actions[outpost.idx_value + 1 * 100] = 1
-            if medbolt_b:
-                avail_actions[outpost.idx_value + 2 * 100] = 1
+            if outpost.HP > 0:
+                if bolt_b:
+                    avail_actions[outpost.idx_value] = 1
+                if firebolt_b:
+                    avail_actions[outpost.idx_value + 1 * 100] = 1
+                if medbolt_b:
+                    avail_actions[outpost.idx_value + 2 * 100] = 1
         for shieldarray in self.shieldarray_list:
-            if bolt_b:
-                avail_actions[shieldarray.idx_value] = 1
+            if shieldarray.HP > 0:
+                if bolt_b:
+                    avail_actions[shieldarray.idx_value] = 1
 
-            if firebolt_b:
-                avail_actions[shieldarray.idx_value + 1 * 100] = 1
+                if firebolt_b:
+                    avail_actions[shieldarray.idx_value + 1 * 100] = 1
 
-            if medbolt_b:
-                avail_actions[shieldarray.idx_value + 2 * 100] = 1
+                if medbolt_b:
+                    avail_actions[shieldarray.idx_value + 2 * 100] = 1
         for building in self.buildingobjective_list:
-            if bolt_b:
-                avail_actions[building.idx_value] = 1
-            if firebolt_b:
-                avail_actions[building.idx_value + 1 * 100] = 1
-            if medbolt_b:
-                avail_actions[building.idx_value + 2 * 100] = 1
+            if building.HP > 0:
+                if bolt_b:
+                    avail_actions[building.idx_value] = 1
+                if firebolt_b:
+                    avail_actions[building.idx_value + 1 * 100] = 1
+                if medbolt_b:
+                    avail_actions[building.idx_value + 2 * 100] = 1
 
-        return avail_actions, army.num_ballista
+        return avail_actions
 
     def get_avail_actions(self):
         avail_actions = []
@@ -346,14 +353,20 @@ class Env():
 
         return avail_actions
 
-# env = Env(10, 10, 10, 10, 20, 30, 10)
-# env.reset()
-# action = env.get_avail_army_actions('A')
-# action = np.nonzero(action)[0]
-# action = action.tolist()
-# action = [action]
-# print(action)
-# env.step(action)
-
-# last_action = np.zeros((10, 300))
-# print(last_action)
+    def _get_HP_information(self):
+        print("---------汇报本回合剩余目标信息：----------")
+        for infantry in self.infantry_list:
+            if infantry.HP > 0:
+                print("{}存活，血量为{}".format(infantry.name, infantry.HP), end=' ')
+        for catapult in self.catapult_list:
+            if catapult.HP > 0:
+                print("{}存活，血量为{}".format(catapult.name, catapult.HP), end=' ')
+        for outpost in self.outpost_list:
+            if outpost.HP > 0:
+                print("{}存活，血量为{}".format(outpost.name, outpost.HP), end=' ')
+        for shieldarray in self.shieldarray_list:
+            if shieldarray.HP > 0:
+                print("{}存活，血量为{}".format(shieldarray.name, shieldarray.HP), end=' ')
+        for building in self.buildingobjective_list:
+            if building.HP > 0:
+                print("{}存活，血量为{}".format(building.name, building.HP), end=' ')

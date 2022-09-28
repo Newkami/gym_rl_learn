@@ -11,9 +11,9 @@ def get_common_args():
     # coma+g2anet, central_v+g2anet, reinforce+g2anet, maven
     parser.add_argument('--alg', type=str, default='qmix', help='the algorithm to train the agent')
     parser.add_argument('--n_steps', type=int, default=2000000, help='total time steps')
-    parser.add_argument('--n_episodes', type=int, default=1, help='the number of episodes before once training')
+    parser.add_argument('--n_episodes', type=int, default=10, help='the number of episodes before once training')
     parser.add_argument('--last_action', type=bool, default=True, help='whether to use the last action to choose action')
-    parser.add_argument('--reuse_network', type=bool, default=True, help='whether to use one network for all agents')
+    parser.add_argument('--reuse_network', type=bool, default=False, help='whether to use one network for all agents')
     parser.add_argument('--gamma', type=float, default=0.99, help='discount factor')
     parser.add_argument('--optimizer', type=str, default="RMS", help='optimizer')
     parser.add_argument('--evaluate_cycle', type=int, default=5000, help='how often to evaluate the model')
@@ -46,7 +46,7 @@ def get_mixer_args(args):
 
     # experience replay
     args.batch_size = 32
-    args.buffer_size = int(5e3)
+    args.buffer_size = int(2500)
 
     # how often to save the model
     args.save_cycle = 5000

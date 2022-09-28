@@ -41,14 +41,14 @@ class RolloutWorker:
             state = self.env.getCurrentState()
             actions, avail_actions, actions_onehot = [], [], []
             for agent_id in range(self.n_agents):
-                avail_action, num_ballista = self.env.get_avail_army_actions(
+                avail_action = self.env.get_avail_army_actions(
                     chr(self._get_armyindex(agent_id) + 65))  # 可用动作的索引值
-                is_alive = self.env.army_list[self.env._get_armyindex(agent_id)].ballista_list[agent_id % 30].is_alive
-                if is_alive:
-                    action = self.agents.choose_action(obs[agent_id], last_action[agent_id], agent_id, avail_action,
-                                                       epsilon, num_ballista)
-                else:
-                    action = 0
+                #is_alive = self.env.army_list[self.env._get_armyindex(agent_id)].ballista_list[agent_id % 30].is_alive
+                #if is_alive:
+                action = self.agents.choose_action(obs[agent_id], last_action[agent_id], agent_id, avail_action,
+                                                       epsilon)
+                # else:
+                #     action = 0
                 # 为动作值产生one-hot
 
                 action_onehot = np.zeros(self.args.n_actions)
@@ -88,7 +88,7 @@ class RolloutWorker:
         # get avail_action for last obs，because target_q needs avail_action in training
         avail_actions = []
         for agent_id in range(self.n_agents):
-            avail_action, num_ballista = self.env.get_avail_army_actions(
+            avail_action = self.env.get_avail_army_actions(
                 chr(self._get_armyindex(agent_id) + 65))  # 可用动作的索引值
             avail_actions.append(avail_action)
         avail_u.append(avail_actions)
